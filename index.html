@@ -1,44 +1,1393 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Drawing Pad</title>
-  <style>
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      background: #e0f7fa;
-    }
-    canvas {
-      border: 2px solid black;
-      background: #f0f0f0;
-      box-shadow: 2px 2px 10px rgba(0,0,0,0.2);
-      cursor: crosshair;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LUXE — Premium Collection</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F7F3EE;
+    --ink: #1A1612;
+    --gold: #C9A96E;
+    --gold-light: #E8D5B0;
+    --muted: #8A7F75;
+    --surface: #EFEBE4;
+    --white: #FDFCFB;
+    --wa-green: #25D366;
+    --wa-dark: #128C7E;
+  }
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.4rem 4rem;
+    background: rgba(247,243,238,0.85);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border-bottom: 1px solid rgba(201,169,110,0.2);
+    transition: padding 0.3s;
+  }
+
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.9rem;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    color: var(--ink);
+    text-decoration: none;
+  }
+
+  .logo span { color: var(--gold); }
+
+  .nav-links {
+    display: flex;
+    gap: 2.5rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    position: relative;
+    padding-bottom: 2px;
+    transition: color 0.3s;
+  }
+
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0;
+    width: 0; height: 1px;
+    background: var(--gold);
+    transition: width 0.3s ease;
+  }
+
+  .nav-links a:hover { color: var(--gold); }
+  .nav-links a:hover::after { width: 100%; }
+
+  .nav-actions { display: flex; align-items: center; gap: 1.2rem; }
+
+  .nav-icon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--ink);
+    padding: 0.4rem;
+    transition: color 0.3s;
+  }
+  .nav-icon:hover { color: var(--gold); }
+
+  .cart-btn {
+    display: flex; align-items: center; gap: 0.5rem;
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    padding: 0.55rem 1.3rem;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+  .cart-btn:hover { background: var(--gold); color: var(--ink); }
+
+  /* Hamburger */
+  .hamburger {
+    display: none;
+    flex-direction: column;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+  }
+  .hamburger span {
+    display: block;
+    width: 24px; height: 1.5px;
+    background: var(--ink);
+    transition: all 0.3s;
+  }
+
+  /* Mobile nav */
+  .mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--cream);
+    z-index: 99;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.4s;
+  }
+  .mobile-menu.active { opacity: 1; pointer-events: all; display: flex; }
+  .mobile-menu a {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.5rem;
+    font-weight: 300;
+    color: var(--ink);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    transition: color 0.3s;
+  }
+  .mobile-menu a:hover { color: var(--gold); }
+  .close-menu {
+    position: absolute; top: 1.5rem; right: 2rem;
+    background: none; border: none;
+    font-size: 2rem; cursor: pointer;
+    color: var(--ink);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding-top: 80px;
+    overflow: hidden;
+  }
+
+  .hero-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6rem 4rem 6rem 5rem;
+  }
+
+  .hero-tag {
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .hero-tag::before {
+    content: '';
+    display: inline-block;
+    width: 30px; height: 1px;
+    background: var(--gold);
+  }
+
+  .hero h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(3.5rem, 6vw, 5.5rem);
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+    margin-bottom: 1.5rem;
+  }
+
+  .hero h1 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .hero-desc {
+    font-size: 0.95rem;
+    line-height: 1.8;
+    color: var(--muted);
+    max-width: 380px;
+    margin-bottom: 2.5rem;
+  }
+
+  .hero-cta {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 0.9rem 2.2rem;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+  }
+  .btn-primary:hover { background: var(--gold); color: var(--ink); }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--ink);
+    padding: 0.9rem 2.2rem;
+    border: 1px solid rgba(26,22,18,0.25);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+  }
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+  .hero-visual {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+  }
+
+  .hero-visual-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* SVG decorative hero image */
+  .hero-art {
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+
+  .hero-badge {
+    position: absolute;
+    bottom: 2.5rem; left: -1.5rem;
+    background: var(--white);
+    padding: 1.2rem 1.8rem;
+    box-shadow: 0 8px 40px rgba(26,22,18,0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border-left: 3px solid var(--gold);
+  }
+
+  .hero-badge-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1;
+  }
+
+  .hero-badge-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* ── MARQUEE ── */
+  .marquee-wrap {
+    background: var(--ink);
+    overflow: hidden;
+    padding: 0.85rem 0;
+  }
+
+  .marquee-track {
+    display: flex;
+    gap: 3rem;
+    width: max-content;
+    animation: marquee 25s linear infinite;
+  }
+
+  .marquee-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    white-space: nowrap;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-light);
+  }
+
+  .marquee-dot { color: var(--gold); font-size: 1.2rem; }
+
+  @keyframes marquee {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+
+  /* ── SECTION COMMONS ── */
+  section { padding: 7rem 5rem; }
+
+  .section-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+  .section-label::before {
+    content: '';
+    display: inline-block;
+    width: 25px; height: 1px;
+    background: var(--gold);
+  }
+
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.2rem, 4vw, 3.5rem);
+    font-weight: 300;
+    line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+
+  .section-title em { font-style: italic; color: var(--gold); }
+
+  /* ── PRODUCTS ── */
+  #products { background: var(--white); }
+
+  .products-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 3.5rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  .filter-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .filter-tab {
+    padding: 0.45rem 1.2rem;
+    border: 1px solid rgba(26,22,18,0.15);
+    background: transparent;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.25s;
+  }
+  .filter-tab:hover, .filter-tab.active {
+    background: var(--ink);
+    color: var(--cream);
+    border-color: var(--ink);
+  }
+
+  .products-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.8rem;
+  }
+
+  .product-card {
+    position: relative;
+    cursor: pointer;
+    group: true;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .product-card:nth-child(1) { animation-delay: 0.05s; }
+  .product-card:nth-child(2) { animation-delay: 0.12s; }
+  .product-card:nth-child(3) { animation-delay: 0.19s; }
+  .product-card:nth-child(4) { animation-delay: 0.26s; }
+  .product-card:nth-child(5) { animation-delay: 0.33s; }
+  .product-card:nth-child(6) { animation-delay: 0.40s; }
+  .product-card:nth-child(7) { animation-delay: 0.47s; }
+  .product-card:nth-child(8) { animation-delay: 0.54s; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .product-image-wrap {
+    position: relative;
+    overflow: hidden;
+    background: var(--surface);
+    aspect-ratio: 3/4;
+  }
+
+  .product-img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    transition: transform 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .product-card:hover .product-img { transform: scale(1.06); }
+
+  .product-badge {
+    position: absolute;
+    top: 1rem; left: 1rem;
+    background: var(--ink);
+    color: var(--cream);
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    padding: 0.3rem 0.7rem;
+  }
+
+  .product-badge.sale { background: #C0392B; }
+  .product-badge.new  { background: var(--gold); color: var(--ink); }
+
+  .product-wishlist {
+    position: absolute;
+    top: 1rem; right: 1rem;
+    width: 34px; height: 34px;
+    background: rgba(247,243,238,0.9);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transform: translateY(-4px);
+    transition: all 0.3s;
+    backdrop-filter: blur(4px);
+  }
+  .product-card:hover .product-wishlist { opacity: 1; transform: translateY(0); }
+  .product-wishlist:hover { background: var(--ink); }
+  .product-wishlist:hover svg path { fill: var(--cream); }
+
+  .product-actions {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  .product-card:hover .product-actions { transform: translateY(0); }
+
+  .btn-wa {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.85rem;
+    background: var(--wa-green);
+    color: #fff;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.25s;
+    text-decoration: none;
+  }
+  .btn-wa:hover { background: var(--wa-dark); }
+
+  .btn-add-cart {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.25s;
+  }
+  .btn-add-cart:hover { background: var(--gold); color: var(--ink); }
+
+  .product-info { padding: 1rem 0 0.3rem; }
+
+  .product-category {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+
+  .product-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem;
+    font-weight: 400;
+    margin-bottom: 0.4rem;
+    line-height: 1.3;
+  }
+
+  .product-price {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .price-current {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .price-old {
+    font-size: 0.82rem;
+    color: var(--muted);
+    text-decoration: line-through;
+  }
+
+  .product-stars {
+    display: flex;
+    gap: 2px;
+    margin-top: 0.35rem;
+  }
+
+  .star { color: var(--gold); font-size: 0.7rem; }
+  .star.empty { color: var(--gold-light); }
+
+  /* ── WHY US ── */
+  #features {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 5rem;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    margin-top: 3rem;
+  }
+
+  .feature-card {
+    padding: 2rem;
+    border: 1px solid rgba(201,169,110,0.2);
+    transition: border-color 0.3s, background 0.3s;
+  }
+  .feature-card:hover {
+    border-color: var(--gold);
+    background: rgba(201,169,110,0.05);
+  }
+
+  .feature-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+  }
+
+  .feature-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem;
+    font-weight: 400;
+    margin-bottom: 0.5rem;
+    color: var(--gold-light);
+  }
+
+  .feature-desc {
+    font-size: 0.82rem;
+    line-height: 1.8;
+    color: rgba(247,243,238,0.55);
+  }
+
+  /* ── TESTIMONIALS ── */
+  #testimonials { background: var(--cream); }
+
+  .testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-top: 3rem;
+  }
+
+  .testimonial-card {
+    background: var(--white);
+    padding: 2rem;
+    border-bottom: 3px solid var(--gold);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .testimonial-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(26,22,18,0.08);
+  }
+
+  .testimonial-quote {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    font-style: italic;
+    line-height: 1.7;
+    color: var(--ink);
+    margin-bottom: 1.2rem;
+  }
+
+  .testimonial-author {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+  }
+
+  .author-avatar {
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    color: var(--gold);
+  }
+
+  .author-name {
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .author-loc {
+    font-size: 0.7rem;
+    color: var(--muted);
+    margin-top: 0.1rem;
+  }
+
+  /* ── NEWSLETTER ── */
+  .newsletter {
+    background: var(--surface);
+    padding: 5rem;
+    text-align: center;
+    border-top: 1px solid rgba(201,169,110,0.25);
+  }
+
+  .newsletter h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+    font-weight: 300;
+    margin-bottom: 0.5rem;
+  }
+
+  .newsletter p {
+    font-size: 0.88rem;
+    color: var(--muted);
+    margin-bottom: 2rem;
+  }
+
+  .newsletter-form {
+    display: flex;
+    max-width: 460px;
+    margin: 0 auto;
+    gap: 0;
+  }
+
+  .newsletter-input {
+    flex: 1;
+    padding: 0.9rem 1.2rem;
+    border: 1px solid rgba(26,22,18,0.2);
+    border-right: none;
+    background: var(--white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.3s;
+  }
+  .newsletter-input:focus { border-color: var(--gold); }
+
+  .newsletter-btn {
+    padding: 0.9rem 1.8rem;
+    background: var(--ink);
+    color: var(--cream);
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: background 0.3s;
+    white-space: nowrap;
+  }
+  .newsletter-btn:hover { background: var(--gold); color: var(--ink); }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--ink);
+    color: rgba(247,243,238,0.6);
+    padding: 4rem 5rem 2rem;
+  }
+
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 3rem;
+  }
+
+  .footer-brand .logo {
+    display: inline-block;
+    margin-bottom: 1rem;
+    color: var(--cream);
+  }
+
+  .footer-desc {
+    font-size: 0.82rem;
+    line-height: 1.8;
+    max-width: 260px;
+  }
+
+  .footer-socials {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 1.5rem;
+  }
+
+  .social-link {
+    width: 34px; height: 34px;
+    border: 1px solid rgba(201,169,110,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--gold-light);
+    text-decoration: none;
+    font-size: 0.75rem;
+    transition: all 0.3s;
+  }
+  .social-link:hover { background: var(--gold); color: var(--ink); border-color: var(--gold); }
+
+  .footer-col h4 {
+    font-size: 0.68rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-bottom: 1.2rem;
+  }
+
+  .footer-links { list-style: none; display: flex; flex-direction: column; gap: 0.6rem; }
+  .footer-links a {
+    color: rgba(247,243,238,0.5);
+    text-decoration: none;
+    font-size: 0.82rem;
+    transition: color 0.3s;
+  }
+  .footer-links a:hover { color: var(--gold); }
+
+  .footer-bottom {
+    border-top: 1px solid rgba(247,243,238,0.08);
+    padding-top: 1.5rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .footer-copy { font-size: 0.75rem; }
+
+  .wa-float {
+    position: fixed;
+    bottom: 2.5rem; right: 2.5rem;
+    width: 56px; height: 56px;
+    background: var(--wa-green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 30px rgba(37,211,102,0.45);
+    z-index: 200;
+    text-decoration: none;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .wa-float:hover {
+    transform: scale(1.1);
+    box-shadow: 0 8px 40px rgba(37,211,102,0.6);
+  }
+
+  .wa-float-pulse::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
+    border-radius: 50%;
+    background: rgba(37,211,102,0.25);
+    animation: pulse 2s ease-out infinite;
+  }
+
+  @keyframes pulse {
+    0%   { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.5); opacity: 0; }
+  }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 2rem; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--cream);
+    padding: 0.75rem 1.8rem;
+    font-size: 0.82rem;
+    letter-spacing: 0.05em;
+    opacity: 0;
+    transition: all 0.35s;
+    z-index: 500;
+    pointer-events: none;
+    border-left: 3px solid var(--gold);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 1200px) {
+    .products-grid { grid-template-columns: repeat(3, 1fr); }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .footer-grid { grid-template-columns: 1fr 1fr; gap: 2rem; }
+  }
+
+  @media (max-width: 900px) {
+    nav { padding: 1.2rem 1.8rem; }
+    .nav-links { display: none; }
+    .hamburger { display: flex; }
+
+    .hero { grid-template-columns: 1fr; min-height: auto; }
+    .hero-text { padding: 3rem 2rem; }
+    .hero-visual { min-height: 55vw; }
+
+    section, #features, footer, .newsletter { padding: 4rem 1.8rem; }
+
+    .products-grid { grid-template-columns: repeat(2, 1fr); gap: 1.2rem; }
+    .features-grid { grid-template-columns: repeat(2, 1fr); }
+    .testimonials-grid { grid-template-columns: 1fr; }
+    .products-header { flex-direction: column; align-items: flex-start; }
+    .footer-grid { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 540px) {
+    .products-grid { grid-template-columns: repeat(2, 1fr); gap: 0.8rem; }
+    .features-grid { grid-template-columns: 1fr; }
+    .newsletter-form { flex-direction: column; }
+    .newsletter-input { border-right: 1px solid rgba(26,22,18,0.2); }
+    .hero h1 { font-size: 2.8rem; }
+    .cart-btn span { display: none; }
+    .footer-bottom { flex-direction: column; text-align: center; }
+  }
+</style>
 </head>
 <body>
 
-<canvas id="drawCanvas" width="500" height="400"></canvas>
+<!-- NAV -->
+<nav>
+  <a href="#" class="logo">LUX<span>E</span></a>
+  <ul class="nav-links">
+    <li><a href="#products">Collection</a></li>
+    <li><a href="#features">About</a></li>
+    <li><a href="#testimonials">Reviews</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="nav-icon" title="Search" onclick="showToast('Search coming soon…')">
+      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+    </button>
+    <button class="cart-btn" onclick="showToast('Cart updated!')">
+      <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span>Bag (0)</span>
+    </button>
+    <button class="hamburger" id="hamburger" aria-label="Open menu">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</nav>
+
+<!-- MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <button class="close-menu" id="closeMenu">&times;</button>
+  <a href="#products" onclick="closeMobileMenu()">Collection</a>
+  <a href="#features" onclick="closeMobileMenu()">About</a>
+  <a href="#testimonials" onclick="closeMobileMenu()">Reviews</a>
+  <a href="#contact" onclick="closeMobileMenu()">Contact</a>
+</div>
+
+<!-- HERO -->
+<section class="hero" id="home">
+  <div class="hero-text">
+    <div class="hero-tag">New Season 2025</div>
+    <h1>Crafted for<br>the <em>Refined</em><br>Aesthetic</h1>
+    <p class="hero-desc">Each piece is a study in restraint — where material, form, and purpose converge into something timeless. Discover our curated collection.</p>
+    <div class="hero-cta">
+      <a href="#products" class="btn-primary">Shop Collection</a>
+      <a href="#features" class="btn-outline">Our Story</a>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="hero-visual-inner">
+      <!-- Decorative SVG visual -->
+      <svg viewBox="0 0 600 800" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;object-fit:cover;">
+        <defs>
+          <linearGradient id="bg1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#EFEBE4"/>
+            <stop offset="100%" style="stop-color:#E0D5C5"/>
+          </linearGradient>
+          <linearGradient id="gold1" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#C9A96E"/>
+            <stop offset="100%" style="stop-color:#E8D5B0"/>
+          </linearGradient>
+          <filter id="shadow1"><feDropShadow dx="0" dy="12" stdDeviation="18" flood-opacity="0.12"/></filter>
+        </defs>
+        <rect width="600" height="800" fill="url(#bg1)"/>
+        <!-- Large decorative circle -->
+        <circle cx="340" cy="380" r="220" fill="none" stroke="url(#gold1)" stroke-width="1" opacity="0.6"/>
+        <circle cx="340" cy="380" r="180" fill="none" stroke="url(#gold1)" stroke-width="0.5" opacity="0.4"/>
+        <!-- Abstract bottle/product silhouette -->
+        <g filter="url(#shadow1)" transform="translate(220,120)">
+          <rect x="50" y="80" width="100" height="200" rx="8" fill="#1A1612" opacity="0.9"/>
+          <rect x="65" y="55" width="70" height="35" rx="5" fill="#1A1612" opacity="0.9"/>
+          <rect x="75" y="42" width="50" height="20" rx="3" fill="#C9A96E"/>
+          <rect x="58" y="145" width="84" height="1" fill="url(#gold1)"/>
+          <rect x="62" y="162" width="76" height="8" rx="2" fill="#C9A96E" opacity="0.5"/>
+          <text x="100" y="200" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="11" fill="#C9A96E" letter-spacing="3">LUXE</text>
+          <text x="100" y="218" text-anchor="middle" font-family="DM Sans, sans-serif" font-size="6.5" fill="rgba(247,243,238,0.5)" letter-spacing="2">PARFUM DE NUIT</text>
+          <!-- Shimmer lines -->
+          <line x1="68" y1="85" x2="68" y2="275" stroke="rgba(201,169,110,0.15)" stroke-width="1"/>
+          <line x1="80" y1="80" x2="80" y2="280" stroke="rgba(255,255,255,0.07)" stroke-width="1.5"/>
+        </g>
+        <!-- Floating petals/shapes -->
+        <ellipse cx="140" cy="220" rx="18" ry="8" fill="#C9A96E" opacity="0.25" transform="rotate(-30,140,220)"/>
+        <ellipse cx="460" cy="300" rx="14" ry="6" fill="#C9A96E" opacity="0.2" transform="rotate(20,460,300)"/>
+        <ellipse cx="160" cy="520" rx="22" ry="9" fill="#1A1612" opacity="0.06" transform="rotate(15,160,520)"/>
+        <ellipse cx="470" cy="160" rx="16" ry="7" fill="#C9A96E" opacity="0.18" transform="rotate(-15,470,160)"/>
+        <!-- Decorative corner lines -->
+        <line x1="40" y1="40" x2="100" y2="40" stroke="url(#gold1)" stroke-width="1" opacity="0.5"/>
+        <line x1="40" y1="40" x2="40" y2="100" stroke="url(#gold1)" stroke-width="1" opacity="0.5"/>
+        <line x1="560" y1="760" x2="500" y2="760" stroke="url(#gold1)" stroke-width="1" opacity="0.5"/>
+        <line x1="560" y1="760" x2="560" y2="700" stroke="url(#gold1)" stroke-width="1" opacity="0.5"/>
+        <!-- Scattered gold dots -->
+        <circle cx="90" cy="380" r="2.5" fill="#C9A96E" opacity="0.4"/>
+        <circle cx="510" cy="500" r="2" fill="#C9A96E" opacity="0.35"/>
+        <circle cx="200" cy="680" r="3" fill="#C9A96E" opacity="0.3"/>
+        <circle cx="430" cy="650" r="2" fill="#C9A96E" opacity="0.3"/>
+        <!-- Typography accent -->
+        <text x="300" y="730" text-anchor="middle" font-family="Cormorant Garamond, serif" font-size="13" fill="rgba(26,22,18,0.15)" letter-spacing="8">MAISON LUXE</text>
+      </svg>
+    </div>
+    <div class="hero-badge">
+      <span class="hero-badge-num">500+</span>
+      <span class="hero-badge-label">Premium Products</span>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-wrap">
+  <div class="marquee-track" id="marqueeTrack">
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Free Delivery Over ₹2000</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Authentic Products</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Order via WhatsApp</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Secure Packaging</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> 7-Day Returns</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Premium Quality</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Free Delivery Over ₹2000</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Authentic Products</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Order via WhatsApp</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Secure Packaging</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> 7-Day Returns</span>
+    <span class="marquee-item"><span class="marquee-dot">✦</span> Premium Quality</span>
+  </div>
+</div>
+
+<!-- PRODUCTS -->
+<section id="products">
+  <div class="products-header">
+    <div>
+      <div class="section-label">Curated Selection</div>
+      <h2 class="section-title">The <em>Collection</em></h2>
+    </div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="filterProducts('all', this)">All</button>
+      <button class="filter-tab" onclick="filterProducts('skincare', this)">Skincare</button>
+      <button class="filter-tab" onclick="filterProducts('fragrance', this)">Fragrance</button>
+      <button class="filter-tab" onclick="filterProducts('accessories', this)">Accessories</button>
+      <button class="filter-tab" onclick="filterProducts('wellness', this)">Wellness</button>
+    </div>
+  </div>
+  <div class="products-grid" id="productsGrid"></div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div style="max-width:500px">
+    <div class="section-label" style="color:var(--gold)">Why Choose Luxe</div>
+    <h2 class="section-title" style="color:var(--cream)">Beyond <em>Product,</em><br>An Experience</h2>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">✦</div>
+      <h3 class="feature-title">Curated Excellence</h3>
+      <p class="feature-desc">Each product passes a rigorous curation process ensuring only the finest make it to your hands.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◈</div>
+      <h3 class="feature-title">WhatsApp Ordering</h3>
+      <p class="feature-desc">Order effortlessly via WhatsApp. Personal attention, real-time updates, and a concierge experience.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⬡</div>
+      <h3 class="feature-title">Premium Packaging</h3>
+      <p class="feature-desc">Every order arrives in bespoke packaging worthy of gifting. First impressions matter.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">◎</div>
+      <h3 class="feature-title">Authentic Sources</h3>
+      <p class="feature-desc">Directly sourced. No intermediaries. Certificate of authenticity with every purchase.</p>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section id="testimonials">
+  <div style="text-align:center;max-width:500px;margin:0 auto 0.5rem;">
+    <div class="section-label" style="justify-content:center;">Client Words</div>
+    <h2 class="section-title">Voices of <em>Trust</em></h2>
+  </div>
+  <div class="testimonials-grid">
+    <div class="testimonial-card">
+      <div class="product-stars" style="margin-bottom:1rem;">
+        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+      </div>
+      <p class="testimonial-quote">"The WhatsApp ordering was so seamless. I messaged them, got a personal response in minutes, and my order arrived beautifully wrapped. Completely elevated experience."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">A</div>
+        <div>
+          <div class="author-name">Arya Mehta</div>
+          <div class="author-loc">Mumbai, India</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="product-stars" style="margin-bottom:1rem;">
+        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+      </div>
+      <p class="testimonial-quote">"I've been searching for truly premium skincare in India that isn't overpriced. LUXE delivers exactly that. The rose serum alone is worth every rupee and more."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">P</div>
+        <div>
+          <div class="author-name">Priya Sharma</div>
+          <div class="author-loc">Delhi, India</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-card">
+      <div class="product-stars" style="margin-bottom:1rem;">
+        <span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span><span class="star">★</span>
+      </div>
+      <p class="testimonial-quote">"The packaging alone is a gift. I ordered as a birthday present and my friend couldn't believe it came from an online store. They thought it was a boutique luxury shop."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">R</div>
+        <div>
+          <div class="author-name">Rohan Kapoor</div>
+          <div class="author-loc">Bangalore, India</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<div class="newsletter" id="contact">
+  <div class="section-label" style="justify-content:center;">Stay Informed</div>
+  <h2>Join the <em style="font-family:'Cormorant Garamond',serif;font-style:italic;color:var(--gold)">Inner Circle</em></h2>
+  <p>New arrivals, exclusive offers, and curated notes — directly to your inbox.</p>
+  <div class="newsletter-form">
+    <input type="email" class="newsletter-input" placeholder="Your email address">
+    <button class="newsletter-btn" onclick="showToast('Welcome to the Inner Circle ✦')">Subscribe</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="#" class="logo">LUX<span>E</span></a>
+      <p class="footer-desc" style="margin-top:0.8rem;">A curated luxury house for those who believe that beauty is in the details. Crafted with intention, delivered with care.</p>
+      <div class="footer-socials">
+        <a href="#" class="social-link">in</a>
+        <a href="#" class="social-link">ig</a>
+        <a href="#" class="social-link">fb</a>
+        <a href="https://wa.me/919999999999" class="social-link" target="_blank" rel="noopener">wa</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Shop</h4>
+      <ul class="footer-links">
+        <li><a href="#products">New Arrivals</a></li>
+        <li><a href="#products">Skincare</a></li>
+        <li><a href="#products">Fragrance</a></li>
+        <li><a href="#products">Accessories</a></li>
+        <li><a href="#products">Wellness</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Help</h4>
+      <ul class="footer-links">
+        <li><a href="#">Size Guide</a></li>
+        <li><a href="#">Shipping Policy</a></li>
+        <li><a href="#">Returns</a></li>
+        <li><a href="#">Track Order</a></li>
+        <li><a href="#">FAQ</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <ul class="footer-links">
+        <li><a href="https://wa.me/919999999999" target="_blank">WhatsApp Us</a></li>
+        <li><a href="mailto:hello@luxe.in">hello@luxe.in</a></li>
+        <li><a href="#">Instagram</a></li>
+        <li><a href="#">Store Locator</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© 2025 LUXE. All rights reserved.</span>
+    <span class="footer-copy">Privacy Policy · Terms · Cookies</span>
+  </div>
+</footer>
+
+<!-- WhatsApp Float Button -->
+<a href="https://wa.me/919999999999?text=Hello%20LUXE!%20I'd%20like%20to%20browse%20your%20collection." target="_blank" rel="noopener" class="wa-float wa-float-pulse" title="Chat on WhatsApp">
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="#fff">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+</a>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
 <script>
-  const canvas = document.getElementById('drawCanvas');
-  const ctx = canvas.getContext('2d');
-  let isDrawing = false;
+// ── Products Data ──
+const WHATSAPP_NUMBER = '919999999999';
 
-  canvas.onmousedown = () => isDrawing = true;
-  canvas.onmouseup = () => isDrawing = false;
-  canvas.onmousemove = (e) => {
-    if (isDrawing) {
-      ctx.fillStyle = 'black';
-      ctx.beginPath();
-      ctx.arc(e.offsetX, e.offsetY, 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  };
+const products = [
+  {
+    id: 1, name: 'Velvet Rose Serum', category: 'skincare',
+    price: 2499, oldPrice: 3200, badge: 'sale',
+    stars: 5, color: '#E8D5B0',
+    svg: `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect width="200" height="260" fill="#EDE3D8"/>
+      <rect x="70" y="60" width="60" height="140" rx="6" fill="#C9A96E" opacity="0.85"/>
+      <rect x="80" y="40" width="40" height="28" rx="4" fill="#C9A96E"/>
+      <rect x="84" y="30" width="32" height="15" rx="2" fill="#8a6540"/>
+      <rect x="72" y="110" width="56" height="1" fill="rgba(255,255,255,0.6)"/>
+      <text x="100" y="145" text-anchor="middle" font-family="serif" font-size="9" fill="white" letter-spacing="1.5">VELVET ROSE</text>
+      <text x="100" y="160" text-anchor="middle" font-family="sans-serif" font-size="6" fill="rgba(255,255,255,0.7)" letter-spacing="1">SERUM 30ML</text>
+    </svg>`
+  },
+  {
+    id: 2, name: 'Noir Oud Parfum', category: 'fragrance',
+    price: 4999, oldPrice: null, badge: 'new',
+    stars: 5, color: '#1A1612',
+    svg: `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect width="200" height="260" fill="#2A2420"/>
+      <rect x="65" y="55" width="70" height="160" rx="5" fill="#1A1612"/>
+      <rect x="76" y="35" width="48" height="28" rx="3" fill="#1A1612"/>
+      <rect x="83" y="22" width="34" height="16" rx="2" fill="#C9A96E"/>
+      <rect x="67" y="100" width="66" height="1" fill="#C9A96E" opacity="0.4"/>
+      <rect x="70" y="118" width="60" height="7" rx="2" fill="#C9A96E" opacity="0.2"/>
+      <text x="100" y="155" text-anchor="middle" font-family="serif" font-size="9" fill="#C9A96E" letter-spacing="2">NOIR OUD</text>
+      <text x="100" y="171" text-anchor="middle" font-family="sans-serif" font-size="6" fill="rgba(201,169,110,0.6)" letter-spacing="1.5">EAU DE PARFUM</text>
+      <line x1="75" y1="62" x2="75" y2="210" stroke="rgba(201,169,110,0.1)" stroke-width="1.5"/>
+    </svg>`
+  },
+  {
+    id: 3, name: 'Gold Leaf Face Oil', category: 'skincare',
+    price: 3299, oldPrice: null, badge: null,
+    stars: 4, color: '#F0E6D3',
+    svg: `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect width="200" height="260" fill="#F5EFE5"/>
+      <ellipse cx="100" cy="155" rx="42" ry="75" fill="#E8D5B0"/>
+      <ellipse cx="100" cy="75" rx="18" ry="22" fill="#E8D5B0"/>
+      <rect x="93" y="52" width="14" height="12" rx="2" fill="#C9A96E"/>
+      <ellipse cx="100" cy="155" rx="28" ry="50" fill="#D4BC90" opacity="0.4"/>
+      <text x="100" y="152" text-anchor="middle" font-family="serif" font-size="8" fill="#8A6540" letter-spacing="1">GOLD LEAF</text>
+      <text x="100" y="168" text-anchor="middle" font-family="sans-serif" font-size="5.5" fill="#A08060" letter-spacing="1">FACE OIL 25ML</text>
+    </svg>`
+  },
+  {
+    id: 4, name: 'Marble Pulse Roller', category: 'accessories',
+    price: 1899, oldPrice: 2400, badge: 'sale',
+    stars: 5, color: '#D4D0CB',
+    svg: `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect width="200" height="260" fill="#E8E4DF"/>
+      <rect x="88" y="80" width="24" height="120" rx="8" fill="#C4BFB8"/>
+      <ellipse cx="100" cy="78" rx="28" ry="20" fill="#C4BFB8"/>
+      <ellipse cx="100" cy="78" rx="24" ry="16" fill="#D8D4CE"/>
+      <ellipse cx="100" cy="200" rx="28" ry="20" fill="#C4BFB8"/>
+      <ellipse cx="100" cy="200" rx="24" ry="16" fill="#D8D4CE"/>
+      <path d="M88,120 Q100,108 112,120" stroke="rgba(180,170,160,0.5)" stroke-width="1.5" fill="none"/>
+      <text x="100" y="148" text-anchor="middle" font-family="sans-serif" font-size="5.5" fill="#8A8078" letter-spacing="1.5">JADE ROLLER</text>
+    </svg>`
+  },
+  {
+    id: 5, name: 'Saffron Brightening Mask', category: 'skincare',
+    price: 1599, oldPrice: null, badge: 'new',
+    stars: 4, color: '#F4D5A0',
+    svg: `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect width="200" height="260" fill="#FBF2E3"/>
+      <rect x="55" y="70" width="90" height="130" rx="6" fill="#F4C46A"/>
+      <rect x="60" y="50" width="80" height="28" rx="0" fill="#F4C46A"/>
+      <rect x="58" y="72" width="84" height="1" fill="rgba(255,255,255,0.5)"/>
+      <rect x="62" y="120" width="76" height="7" rx="2" fill="rgba(255,255,255,0.35)"/>
+      <text x="100" y="155" text-anchor="middle" font-family="serif" font-size="8.5" fill="#5C3D00" letter-spacing="1">SAFFRON</text>
+      <text x="100" y="170" text-anchor="middle" font-family="sans-serif" font-size="6" fill="rgba(92,61,0,0.7)" letter-spacing="1">BRIGHTENING MASK</text>
+    </svg>`
+  },
+  {
+    id: 6, name: 'White Musk Body Mist', category: 'fragrance',
+    price: 1299, oldPrice: null, badge: null,
+    stars: 4, color: '#F7F3EE',
+    svg: `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect width="200" height="260" fill="#F0ECE7"/>
+      <rect x="72" y="65" width="56" height="155" rx="8" fill="rgba(247,243,238,0.9)" stroke="#E0D8CE" stroke-width="1"/>
+      <rect x="78" y="45" width="44" height="24" rx="4" fill="rgba(240,235,228,0.9)" stroke="#DDD5CA" stroke-width="1"/>
+      <rect x="85" y="34" width="30" height="14" rx="2" fill="#C9A96E"/>
+      <text x="100" y="148" text-anchor="middle" font-family="serif" font-size="8" fill="#8A7F75" letter-spacing="1.5">WHITE MUSK</text>
+      <text x="100" y="163" text-anchor="middle" font-family="sans-serif" font-size="5.5" fill="#B0A898" letter-spacing="1">BODY MIST 200ML</text>
+      <circle cx="100" cy="112" r="14" fill="none" stroke="#C9A96E" stroke-width="0.75" opacity="0.6"/>
+    </svg>`
+  },
+  {
+    id: 7, name: 'Crystal Gua Sha Set', category: 'accessories',
+    price: 2199, oldPrice: 2800, badge: 'sale',
+    stars: 5, color: '#C8E0D8',
+    svg: `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect width="200" height="260" fill="#E0F0EC"/>
+      <rect x="58" y="80" width="84" height="105" rx="35" fill="#9ECEBE" opacity="0.8"/>
+      <rect x="62" y="84" width="76" height="97" rx="32" fill="#B8D8CE" opacity="0.6"/>
+      <path d="M80,115 Q100,100 120,115 Q120,160 100,175 Q80,160 80,115Z" fill="#7ABCB0" opacity="0.5"/>
+      <text x="100" y="220" text-anchor="middle" font-family="sans-serif" font-size="6" fill="#3A8078" letter-spacing="1.5">GUA SHA SET</text>
+    </svg>`
+  },
+  {
+    id: 8, name: 'Ashwagandha Glow Blend', category: 'wellness',
+    price: 999, oldPrice: null, badge: 'new',
+    stars: 4, color: '#D4B896',
+    svg: `<svg viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+      <rect width="200" height="260" fill="#EDE4D8"/>
+      <ellipse cx="100" cy="165" rx="48" ry="60" fill="#C4986E"/>
+      <ellipse cx="100" cy="100" rx="22" ry="26" fill="#C4986E"/>
+      <rect x="93" y="73" width="14" height="12" rx="6" fill="#8A5C30"/>
+      <ellipse cx="100" cy="165" rx="35" ry="44" fill="#D4A878" opacity="0.5"/>
+      <text x="100" y="160" text-anchor="middle" font-family="serif" font-size="7.5" fill="white" letter-spacing="1">ASHWAGANDHA</text>
+      <text x="100" y="175" text-anchor="middle" font-family="sans-serif" font-size="5.5" fill="rgba(255,255,255,0.75)" letter-spacing="1">GLOW BLEND</text>
+    </svg>`
+  },
+];
+
+// ── Render products ──
+function renderProducts(filter = 'all') {
+  const grid = document.getElementById('productsGrid');
+  const filtered = filter === 'all' ? products : products.filter(p => p.category === filter);
+  
+  grid.innerHTML = filtered.map((p, i) => `
+    <div class="product-card" data-category="${p.category}" style="animation-delay:${i * 0.07}s">
+      <div class="product-image-wrap">
+        ${p.badge ? `<span class="product-badge ${p.badge}">${p.badge === 'sale' ? 'Sale' : 'New'}</span>` : ''}
+        <button class="product-wishlist" onclick="showToast('Added to wishlist ♡')" aria-label="Wishlist">
+          <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
+        ${p.svg}
+        <div class="product-actions">
+          <a href="${waLink(p)}" target="_blank" rel="noopener" class="btn-wa">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Order on WhatsApp
+          </a>
+          <button class="btn-add-cart" onclick="addToCart('${p.name}')">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            Add to Cart
+          </button>
+        </div>
+      </div>
+      <div class="product-info">
+        <div class="product-category">${p.category}</div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-price">
+          <span class="price-current">₹${p.price.toLocaleString('en-IN')}</span>
+          ${p.oldPrice ? `<span class="price-old">₹${p.oldPrice.toLocaleString('en-IN')}</span>` : ''}
+        </div>
+        <div class="product-stars">
+          ${Array.from({length:5}, (_,i) => `<span class="star ${i < p.stars ? '' : 'empty'}">★</span>`).join('')}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function waLink(p) {
+  const msg = encodeURIComponent(`Hi LUXE! 🌟 I'd like to order:\n\n*${p.name}*\nPrice: ₹${p.price.toLocaleString('en-IN')}\n\nPlease share availability and payment details. Thank you!`);
+  return `https://wa.me/${WHATSAPP_NUMBER}?text=${msg}`;
+}
+
+function addToCart(name) {
+  showToast(`${name} added to bag ✦`);
+}
+
+function filterProducts(cat, btn) {
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  renderProducts(cat);
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── Hamburger ──
+document.getElementById('hamburger').addEventListener('click', () => {
+  document.getElementById('mobileMenu').classList.add('active');
+});
+document.getElementById('closeMenu').addEventListener('click', closeMobileMenu);
+function closeMobileMenu() {
+  document.getElementById('mobileMenu').classList.remove('active');
+}
+
+// ── Init ──
+renderProducts();
 </script>
-
 </body>
 </html>
